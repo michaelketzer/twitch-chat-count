@@ -1,0 +1,93 @@
+variables:
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  GIT_DEPTH: "0"
+
+stages:
+  - test
+  - build
+  - deploy_prod
+  - sentry
+
+include:
+  stage: test
+  template: Dependency-Scanning.gitlab-ci.yml
+
+sonarcloud-check:
+  stage: test
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner
+  only:
+    - merge_requests
+    - master
+    - develop
+
+build:
+  stage: build
+  image: node:13.1.0
+  before_script:
+    - yarn config set cache-folder .yarn
+    - yarn install
+  cache:
+    paths:
+      - node_modules/
+      - .yarn
+  artifacts:
+    paths:
+      - lib/
+  script:
+    - echo "Building"
+    - yarn build
+
+deploy_prod:
+  stage: deploy_prod
+  needs:
+    - job: build
+      artifacts: true
+  image: node:13.1.0
+  before_script:
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$PROD_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $PROD_HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  only:
+    - master
+  script:
+    - echo "Uploading build artifacts"
+    - scp -P22 -r package.json $PROD_USER@$PROD_HOST:$CI_PROJECT_TITLE
+    - scp -P22 -r yarn.lock $PROD_USER@$PROD_HOST:$CI_PROJECT_TITLE
+    - scp -P22 -r lib/* $PROD_USER@$PROD_HOST:$CI_PROJECT_TITLE/lib
+    - ssh -p22 $PROD_USER@$PROD_HOST "cd $CI_PROJECT_TITLE && yarn install"
+    - ssh -p22 $PROD_USER@$PROD_HOST "sudo pm2 restart $CI_PROJECT_TITLE"
+
+sentry:
+  image: 
+    name: getsentry/sentry-cli:1.49.0
+    entrypoint: [""]
+  stage: sentry
+  needs:
+    - job: build
+      artifacts: true
+    - job: deploy_prod
+      artifacts: false
+  script:
+    - echo "Uploading JavaScript files to Sentry..."
+    - export SENTRY_AUTH_TOKEN=$SENTRY_BASE_TOKEN
+    - export SENTRY_ORG=$SENTRY_BASE_ORGANIZATION
+    - export SENTRY_PROJECT=$SENTRY_BASE_PROJECT
+    - sentry-cli releases new -p $SENTRY_BASE_PROJECT "$CI_COMMIT_SHA"
+    - sentry-cli releases files "$CI_COMMIT_SHA" upload-sourcemaps --no-rewrite ./lib/
+    - sentry-cli releases set-commits --auto "$CI_COMMIT_SHA"
+    - sentry-cli releases finalize "$CI_COMMIT_SHA"
+    - sentry-cli releases deploys "$CI_COMMIT_SHA" new -e production
+  only:
+    - master

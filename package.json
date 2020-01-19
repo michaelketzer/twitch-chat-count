@@ -1,0 +1,36 @@
+{
+  "name": "twitch-chatters",
+  "version": "1.0.0",
+  "description": "Twitch observer to count the amount of viewers and",
+  "main": "lib/app.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "start": "node lib/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@bitbucket.org/griefco-de/twitch-chatters.git"
+  },
+  "keywords": [
+    "shokztv",
+    "twitch",
+    "chatters"
+  ],
+  "author": "GriefCode",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/griefco-de/twitch-chatters#readme",
+  "dependencies": {
+    "@sentry/node": "^5.9.0",
+    "@types/dotenv": "^8.2.0",
+    "@types/node-fetch": "^2.5.4",
+    "@types/ws": "^6.0.4",
+    "dotenv": "^8.2.0",
+    "node-fetch": "^2.6.0",
+    "twitch-api-v5": "^2.0.4",
+    "typescript": "^3.7.5",
+    "ws": "^7.2.0"
+  }
+}
