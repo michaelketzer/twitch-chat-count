@@ -84,7 +84,7 @@ sentry:
     - export SENTRY_AUTH_TOKEN=$SENTRY_BASE_TOKEN
     - export SENTRY_ORG=$SENTRY_BASE_ORGANIZATION
     - export SENTRY_PROJECT=$SENTRY_BASE_PROJECT
-    - sentry-cli releases new "$CI_COMMIT_SHA" --project $SENTRY_BASE_PROJECT
+    - sentry-cli releases new "$CI_COMMIT_SHA" --project "$SENTRY_BASE_PROJECT"
     - sentry-cli releases files "$CI_COMMIT_SHA" upload-sourcemaps --no-rewrite ./lib/
     - sentry-cli releases set-commits --auto "$CI_COMMIT_SHA"
     - sentry-cli releases finalize "$CI_COMMIT_SHA"
