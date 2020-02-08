@@ -3,31 +3,15 @@ dotenv.config();
 import api from 'twitch-api-v5';
 import * as Sentry from '@sentry/node';
 import fetch from 'node-fetch';
-import WebSocket from 'ws';
+import Transport from 'backend-transport';
 
-const {WS_SERVICE='',CLIENT_ID='',CHATTERS_URL='',WEBSERVICE_URL='',CHANNEL_ID='', SENTRY_DSN=null} = process.env;
+const {CLIENT_ID='',CHATTERS_URL='',WEBSERVICE_URL='',CHANNEL_ID='', SENTRY_DSN=null} = process.env;
+
+const ws = new Transport({url: WEBSERVICE_URL});
 
 if(SENTRY_DSN) {
     Sentry.init({ dsn: SENTRY_DSN });
 }
-
-let ws: WebSocket | null = null;
-
-var connect = function(){
-    ws = new WebSocket(WS_SERVICE);
-    ws.on('open', function() {
-	    console.log('Backend connection established');
-    });
-    ws.on('error', function() {
-        console.log('Backend connection error. Reconnecting...');
-    });
-    ws.on('close', function() {
-        console.error('Backend connection closed. Trying reconnecting...');
-        setTimeout(connect, 2500);
-    });
-};
-
-connect();
 
 api.clientID = CLIENT_ID;
 const chattersUrl = CHATTERS_URL;
@@ -68,12 +52,10 @@ function recordStats(chatter: Chatters, stream: Stream): void {
     parted.forEach((name) => previousChatter.delete(name));
 
 
-    if (ws && ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify({
-            viewer: {chatter: {joined, stayed, parted}, totalCount: stream.viewers},
-            type: 'viewers'
-        }));
-    }
+    ws.send(JSON.stringify({
+        viewer: {chatter: {joined, stayed, parted}, totalCount: stream.viewers},
+        type: 'viewers'
+    }));
 
     fetch(webserviceUrl, {method: 'POST', body: JSON.stringify({chatter: {joined, stayed, parted}, stream})})
         .then(response => {
