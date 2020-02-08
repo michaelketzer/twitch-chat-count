@@ -6,7 +6,6 @@ stages:
   - test
   - build
   - deploy_prod
-  - sentry
 
 include:
   stage: test
@@ -30,7 +29,7 @@ sonarcloud-check:
 
 build:
   stage: build
-  image: node:13.1.0
+  image: node:13.5.0
   before_script:
     - yarn config set cache-folder .yarn
     - yarn install
@@ -63,31 +62,8 @@ deploy_prod:
     - master
   script:
     - echo "Uploading build artifacts"
-    - scp -P22 -r package.json $PROD_USER@$PROD_HOST:$CI_PROJECT_TITLE
-    - scp -P22 -r yarn.lock $PROD_USER@$PROD_HOST:$CI_PROJECT_TITLE
-    - scp -P22 -r lib/* $PROD_USER@$PROD_HOST:$CI_PROJECT_TITLE/lib
-    - ssh -p22 $PROD_USER@$PROD_HOST "cd $CI_PROJECT_TITLE && yarn install"
+    - scp -P22 -r package.json $PROD_USER@$PROD_HOST:$CI_PROJECT_NAMESPACE/$CI_PROJECT_TITLE
+    - scp -P22 -r yarn.lock $PROD_USER@$PROD_HOST:$CI_PROJECT_NAMESPACE/$CI_PROJECT_TITLE
+    - scp -P22 -r lib/* $PROD_USER@$PROD_HOST:$CI_PROJECT_NAMESPACE/$CI_PROJECT_TITLE/lib
+    - ssh -p22 $PROD_USER@$PROD_HOST "cd $CI_PROJECT_NAMESPACE/$CI_PROJECT_TITLE && yarn install"
     - ssh -p22 $PROD_USER@$PROD_HOST "sudo pm2 restart $CI_PROJECT_TITLE"
-
-sentry:
-  image: 
-    name: getsentry/sentry-cli:1.49.0
-    entrypoint: [""]
-  stage: sentry
-  needs:
-    - job: build
-      artifacts: true
-    - job: deploy_prod
-      artifacts: false
-  script:
-    - echo "Uploading JavaScript files to Sentry..."
-    - export SENTRY_AUTH_TOKEN=$SENTRY_BASE_TOKEN
-    - export SENTRY_ORG=$SENTRY_BASE_ORGANIZATION
-    - export SENTRY_PROJECT=$SENTRY_BASE_PROJECT
-    - sentry-cli releases new -p $SENTRY_BASE_PROJECT "$CI_COMMIT_SHA"
-    - sentry-cli releases files "$CI_COMMIT_SHA" upload-sourcemaps --no-rewrite ./lib/
-    - sentry-cli releases set-commits --auto "$CI_COMMIT_SHA"
-    - sentry-cli releases finalize "$CI_COMMIT_SHA"
-    - sentry-cli releases deploys "$CI_COMMIT_SHA" new -e production
-  only:
-    - master
