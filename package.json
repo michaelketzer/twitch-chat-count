@@ -23,7 +23,7 @@
   "license": "ISC",
   "homepage": "https://bitbucket.org/griefco-de/twitch-chatters#readme",
   "dependencies": {
-    "@sentry/node": "^5.9.0",
+    "@sentry/node": "^5.27.4",
     "@types/dotenv": "^8.2.0",
     "@types/node-fetch": "^2.5.4",
     "@types/ws": "^6.0.4",
