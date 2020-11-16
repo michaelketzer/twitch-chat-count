@@ -27,7 +27,7 @@
     "@types/dotenv": "^8.2.0",
     "@types/node-fetch": "^2.5.4",
     "@types/ws": "^6.0.4",
-    "backend-transport": "1.0.2",
+    "backend-transport": "1.0.4",
     "dotenv": "^8.2.0",
     "node-fetch": "^2.6.0",
     "twitch-api-v5": "^2.0.4",
